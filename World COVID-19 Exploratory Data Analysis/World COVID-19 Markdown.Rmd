@@ -1,0 +1,346 @@
+---
+title: "**World COVID-19 Exploratory Data Analysis (EDA)**"
+author: "Muhammad Adisurya Pratama"
+date: "Last Edited `r format(Sys.time(), '%B %d, %Y')`"
+output: 
+  html_document:
+    toc: TRUE
+    toc_float:
+      collapsed: FALSE
+      smooth_scroll: TRUE
+    toc_depth: 4
+  pdf_document: default
+---
+
+```{=html}
+<style>
+
+#TOC {
+  color: #374258;
+  background-color: #F3F3F3;
+  font-family: Helvetica;
+  font-size: 12px;
+  border-color: #708090;
+}
+h1.title {
+  color: #CC274C;
+  background-color: #F3F3F3;
+  font-family: Helvetica;
+  font-size: 32px;
+}
+h4.author {
+  color: #374258;
+  background-color: #F3F3F3;
+  font-family: Helvetica;
+  font-size: 20px;
+}
+h4.date {
+  color: #374258;
+  background-color: #F3F3F3;
+  font-family: Helvetica;
+  font-size: 16px;
+}
+body {
+  color: #374258;
+  font-family: Helvetica;
+  font-size: 15px;
+  background: #F3F3F3;
+}
+
+</style>
+```
+
+
+```{r setup, include = FALSE}
+
+knitr::opts_chunk$set(fig.align = 'center', echo = TRUE)
+
+```
+
+## **Chapter I: INTRODUCTION**
+
+In this section, I will overview this project.
+
+This Report examines and explores the dynamics of Corona Virus Disease (COVID-19) around the world by employing daily time series data that covers more than 100 countries for January 01st 2020 to May 10th 2023 period of time.
+
+I conduct Exploratory Data Analysis (EDA) and further examine various feature of World COVID-19 Dataset. Additionally, this report is based on R markdown and it is reproducible to tailor your needs.
+
+### **A) Initial Step**
+
+To conduct the exploratory data analysis, our first step is to import corresponding data for this report. Before importing our data, let us deploy all related library.
+
+#### 1. Import Library
+
+```{r data import-library, include = TRUE, warning = FALSE, message = FALSE}
+
+library(readxl)
+library(ggplot2)
+library(dplyr)
+library(lubridate)
+library(knitr)
+
+```
+
+After importing all libraries that which will be employed, next, we import the data for this report named "World Corona Virus (COVID-19) Dataset". This data file encompasses more than 100 countries for COVID-19 parameters, such as number of new cases and total cumulative cases. I obtained the data from [ourworldindata.org](https://ourworldindata.org/)
+
+#### 2. Import Data
+
+```{r data import-corresponding-data, include = TRUE, warning = FALSE, message = TRUE}
+
+world_covid19 <- read_excel("D:/Data Analytics/R Programming/Portfolio/World COVID-19 Exploratory Data Analysis/World Corona Virus (COVID-19) Dataset.xlsx", sheet = "cleansed_data")
+
+```
+
+Now, let us view the data which will be explored in this report.
+
+#### 3. View All Data
+
+```{r world-covid19-dataset, include = TRUE, echo = TRUE, message = FALSE, warning = FALSE}
+
+world_covid19
+
+```
+
+Based on table observation, it is essential to note that the table consists of more than 300,000 rows of data and 26 columns.
+
+## **Chapter II: EXPLORATORY DATA ANALYSIS (EDA)**
+
+In this section, I examine data features and conduct exploratory data analysis by employing COVID-19 dataset that which have been loaded into this report. In this data exploration, I utilize two main R packages, namely dplyr and ggplot2. Now, let us begin this data adventure and exploration
+
+### **A) Analyzing Data with Table**
+
+#### Q1: How many locations are there within the table for each continent?
+
+```{r number-of-countries, message = FALSE, warning = FALSE, }
+
+countries_per_continent <- world_covid19 %>% group_by(continent) %>% summarize(number_of_locations = n_distinct(location)) %>% arrange(desc(number_of_locations))
+
+kable(
+  countries_per_continent, col.names = c("Continent", "Number of Locations"), align = "lr", caption = "**Table 1. Number of Locations per Continent**")
+
+```
+
+Based on table above, Africa, Europe, and Asia are three top continents with highest number of locations, those are 58, 55, and 51, respectively.
+
+#### Q2: What is the average number of reproduction rate for each location in Africa? Select Top 20 Locations
+
+```{r average_reproduction_rate, warning = FALSE, message = FALSE}
+
+africa_average_reproduction_rate <- world_covid19 %>% 
+  filter(continent == "Africa") %>% 
+    group_by(location) %>% 
+      summarize(average_reproduction_rate = mean(reproduction_rate)) %>% 
+    mutate(across(where(is.numeric), round, 4)) %>% 
+  arrange(desc(average_reproduction_rate)) %>% 
+top_n(20)
+
+#### Create a Table for the result
+
+kable(
+  africa_average_reproduction_rate, 
+    col.names = c("Location", "Average Reproduction Rate"), 
+  align = "lr", caption = "**Table 2. Average Reproduction Rate for 20 Locations in Africa Continent**")
+
+```
+
+Based on Table 2 above, it is concluded that of 20 locations in Africa continent, Morocco, South Africa, and Cote d'Ivoire are three locations with the highest average reproduction rate of COVID-19.
+
+#### Q3: Who are the 5 locations with highest total COVID-19 casualties that have been recorded for each location around Oceania in 2021? 
+
+```{r total-casualties-oceania, warning = FALSE, message = FALSE}
+
+total_casualties_oceania <- world_covid19 %>%
+  filter(continent == "Oceania", year == 2021) %>%
+    group_by(location) %>% 
+  summarize(total_covid19_casualties = sum(new_deaths)) %>%
+arrange(desc(total_covid19_casualties)) %>% top_n(5)
+
+kable(
+  total_casualties_oceania,
+    col.names = c("Location", "Total Casualties"),
+  align = "lr", caption = "**Table 3. Total Casualties of COVID-19 for 5 Locations with highest casualties in Oceania during 2021**"
+)
+
+```
+
+Table 3 presents 5 locations in Oceania with the highest total casualties of COVID-19, two of which are Australia and Fiji with total casualties 1523 and 696 people, respectively.
+
+#### Q4: What is the total number of COVID-19 tests that have been conducted for each location within Asian continent during 2022? Present only 15 locations with highest tests
+
+```{r total-tests-Asia, message = FALSE, warning = FALSE, echo = TRUE}
+
+total_tests_asia <- world_covid19 %>% 
+  filter(
+    continent == "Asia", year == 2022) %>%   
+      group_by(location) %>%
+    summarize(
+      total_number_of_tests = sum(new_tests)) %>%
+  arrange(
+    desc(total_number_of_tests)) %>%
+top_n(15)
+
+kable(
+  total_tests_asia,
+    col.names = c("Location", "Total Number of Tests"),
+  align = "lr", caption = "**Table 4. Total Number of COVID-19 Tests for 15 Locations in Asia Continent during 2022**"
+)
+
+```
+
+Table 4 reports 15 locations in Asia continent with the highest total COVID-19 tests during 2022. India, United Arab Emirates, and South Korea become three locations with the highest total COVID-19 tests among all locations observed within Table 4.
+
+#### Q5: Observe the average stringency index for Indonesia each month every year until 2022
+
+```{r average-stringency-index-indonesia, message = FALSE, warning = FALSE}
+
+Indonesia_average_stringency <- world_covid19 %>%
+  filter(
+    location == "Indonesia", year %in% c(2020, 2021, 2022)
+    ) %>%
+    group_by(
+      year, month(date, label = TRUE)
+      ) %>%
+  summarize(average_stringency_index = 
+            mean(stringency_index)) %>%
+mutate(
+  across(where(is.numeric), round, 2)
+  )
+
+kable(
+  Indonesia_average_stringency,
+    col.names = c("Year", "Month", "Average Stringency Index"), align = "lrr", caption = "**Table 5. Monthly Average of Indonesia's Stringency Index Between 2020 and 2022**"
+  )
+
+```
+
+Table 5 above represents monthly average of Stringency Index for Indonesia between 2020 and 2022. Based on the observation, May 2020 becomes the strictest month among all, i.e. high stringency index (73.82). This is not surprising, since on May 2020, governments responded the initial phase of COVID-19 pandemic by enacting mobility restriction policy named Large-Scale Social Restriction (LSSR or also known as Pembatasan Sosial Berskala Besar (PSBB) in Bahasa Indonesia). 
+
+### **B) Exploring and Analyzing Data with Visualization**
+
+In this report, I have explored the data by employing several tables to present particular aspect of the data, such as stringency index, total number of tests, and so on.
+
+Nevertheless, using tables only for data exploration remain insufficient. Therefore, I will explore this data even further by visualizing COVID-19 dataset. Now, let us begin our next exploration, shall we?
+
+#### Q6: How is the trend of stringency index for The United Kingdom in 2022?
+
+```{r stringency-trend, message = FALSE, warning = FALSE, fig.cap = '**Figure 1. Stringency Index for The United Kingdom in 2022**'}
+
+world_covid19 %>%
+  filter(year == 2022, location == "United Kingdom") %>%
+    select(location, year, date, stringency_index) %>%
+ggplot(
+  aes(x = date, y = stringency_index)
+  ) + geom_line(size = 1, color = "#CC274C") +
+  labs(
+    x = "Date Time",
+    y = "Stringency Index",
+    caption = "Source: Our world in Data"
+  ) + theme(
+    panel.grid = element_blank(),
+      axis.line = element_line(colour = "#3D4251"),
+    rect = element_blank(),
+      axis.ticks = element_line(colour = "#3D4251"),
+    axis.text = element_text(color = "black")
+  ) +
+  scale_y_continuous(
+    expand = c(0,0), 
+      limits = c(0, 50),
+    breaks = c(0, 10, 20, 30, 40, 50)
+  )
+
+```
+
+Based on Figure 1. above, it is suggested that there is a downward trend of Stringency Index in the United Kingdom during 2022. This evident also emphasizes that there are constant periods of Stringency Index Between April and October 2022, as well as October and December 2022.
+
+#### Q7: How is the data distribution of COVID-19 New Cases in Japan during 2022?
+
+```{r histogram-new-cases, message = FALSE, warning = FALSE, fig.cap = '**Figure 2. Japan COVID-19 New Cases Data Distribution in 2022**'}
+
+world_covid19 %>%
+  filter(location == "Japan", year == 2022) %>%
+    select(
+      location, year, date, stringency_index, new_cases
+      ) %>% ggplot(
+        aes(
+          x = new_cases
+        )
+      ) + geom_histogram(fill = "#023246") +
+  labs(
+    x = "Number of New Cases",
+    y = "Count Number",
+    caption = "Source: Our World in Data"
+  ) + 
+  theme(
+    panel.grid = element_blank(),
+      axis.line = element_line(colour = "#3D4251"),
+    rect = element_blank(),
+      axis.ticks = element_line(colour = "#3D4251"),
+    axis.text = element_text(color = "black")
+  ) +
+  scale_x_continuous(
+    expand = c(0,0), 
+      limits = c(0, 350000),
+    breaks = c(0, 100000, 200000, 300000)
+  ) +
+  scale_y_continuous(
+    expand = c(0,0), 
+      limits = c(0,60), 
+    breaks = c(15, 30, 45, 60)
+  )
+
+```
+
+Based on histogram above, it is essential to note that number of COVID-19 new cases data distribution in Japan during 2022 are heavily distributed between 0 and 100,000. However, this histogram also shed a light that there is new cases that which occurred and reached more than 300,000 new cases.Furthermore, this histogram suggests that the data distribution of COVID-19 new cases in Japan are right-skewed.
+
+
+#### Q8: Who are the 10 highest average COVID-19 new cases in Asia during 2021?
+
+```{r highest-average-stringency-index, message = FALSE, warning = FALSE, fig.cap = '**Figure 3. Top 10 Locations with Highest Average New Cases in Asia During 2021**'}
+
+world_covid19 %>%
+  filter(continent == "Asia", year == 2021) %>%
+    select(continent, location, date, year, new_cases) %>%
+      group_by(location) %>%
+        summarize(
+          avg_new_cases = mean(new_cases)
+          ) %>% 
+      arrange(desc(avg_new_cases)) %>% 
+  top_n(10) %>% 
+ggplot(
+  aes(
+    x = avg_new_cases, y = reorder(location, + avg_new_cases), color = avg_new_cases
+    )
+      ) + 
+      geom_point(size = 6) +
+    geom_segment(aes(xend = 0, yend = location), size = 2) +
+  geom_text(
+    aes(
+      label = round(avg_new_cases, 0)), 
+      color = "black", 
+      size = 2.5, 
+      position = "identity", hjust = -0.6) +
+labs(
+    x = "Average New Cases",
+    y = "Location",
+    caption = "Source: Our World in Data"
+  ) +
+  theme(
+      panel.grid = element_blank(),
+      axis.line = element_line(colour = "#3D4251"),
+      rect = element_blank(),
+      axis.ticks = element_line(colour = "#3D4251"),
+      legend.title = element_blank(),
+      axis.text = element_text(color = "black")
+  ) +
+  scale_x_continuous(
+    expand = c(0,0), 
+    limits = c(0,80000), 
+    breaks = c(0, 20000, 40000, 60000, 80000)
+    ) +
+  scale_color_gradient2(
+    mid = "#28B67E", high = "#1D4C4F"
+    )
+
+```
+
+Now we have obtain 10 locations with the highest average COVID-19 new cases of COVID-19 in Asia continent during 2022, three of which are India, Turkey, and Iran with 67321, 19856, and 13639 number of new cases, respectively.
